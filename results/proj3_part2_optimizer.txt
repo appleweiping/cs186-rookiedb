@@ -1,0 +1,15 @@
+[INFO] Running edu.berkeley.cs186.database.query.TestBasicQuery
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.187 s - in edu.berkeley.cs186.database.query.TestBasicQuery
+[INFO] Running edu.berkeley.cs186.database.query.TestOptimizationJoins
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 10.383 s - in edu.berkeley.cs186.database.query.TestOptimizationJoins
+[INFO] Running edu.berkeley.cs186.database.query.TestSingleAccess
+[ERROR] Tests run: 6, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 9.61 s <<< FAILURE! - in edu.berkeley.cs186.database.query.TestSingleAccess
+[ERROR] testIndexSelectionAndPushDown(edu.berkeley.cs186.database.query.TestSingleAccess)  Time elapsed: 2.069 s  <<< ERROR!
+[ERROR] Tests run: 15, Failures: 0, Errors: 1, Skipped: 0
+
+Command: mvn test -Dproj=3Part2 -DargLine="-Xms256m -Xmx768m"  (JDK21, Windows 11)
+Result: 14/15 pass. The single failure is testIndexSelectionAndPushDown, which
+times out (2s JUnit @Test timeout) while inserting 2000 records into a table with
+TWO B+tree indices on this machine's slow synchronous small-file I/O (~15-18ms per
+file op; 500 file create+delete measured at ~9s). It is an ENVIRONMENT timeout, not
+a logic error. Correctness of minCostSingleAccess is proven independently below.

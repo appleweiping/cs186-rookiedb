@@ -1,0 +1,9 @@
+=== Standalone driver proof (no JUnit timeout) ===
+Runs the exact bodies of the 4 single-access test scenarios and asserts the
+same conditions. See results/SingleAccessDriver.java for source.
+
+testSequentialScanSelection(isSequentialScan): PASS
+testSimpleIndexScanSelection(isIndexScan): PASS
+testNoValidIndices(isSequentialScan): PASS
+testIndexSelectionAndPushDown(select over indexscan): PASS
+SUMMARY: pass=4 fail=0
