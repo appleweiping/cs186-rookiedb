@@ -1,0 +1,12 @@
+[INFO] Running edu.berkeley.cs186.database.index.TestBPlusNode
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.056 s - in edu.berkeley.cs186.database.index.TestBPlusNode
+[INFO] Running edu.berkeley.cs186.database.index.TestBPlusTree
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.143 s - in edu.berkeley.cs186.database.index.TestBPlusTree
+[INFO] Running edu.berkeley.cs186.database.index.TestInnerNode
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.136 s - in edu.berkeley.cs186.database.index.TestInnerNode
+[INFO] Running edu.berkeley.cs186.database.index.TestLeafNode
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.209 s - in edu.berkeley.cs186.database.index.TestLeafNode
+[INFO] Tests run: 20, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+
+Command: mvn test -Dproj=2   (JDK21, Maven 3.9.16, Windows 11)
