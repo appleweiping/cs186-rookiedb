@@ -1,0 +1,14 @@
+=== RookieDB end-to-end demo (all 4 projects) ===
+DB dir: C:/Users/admin/AppData/Local/Temp/rookiedemo_114689367421000
+[proj2] Created tables, inserted 50 students + ~60 enrollments, built B+tree index on students.sid
+[proj2] Index point lookup students.sid=42 -> (42,'student42',2.2) (1 row)
+[proj3] Optimized join students x enrollments where gpa>3.5 -> 8 result rows
+[proj3] Chosen plan:
+         SNLJ on students.sid=enrollments.sid (cost=1)
+         	-> Select students.gpa>3.5 (cost=1)
+         		-> Seq Scan on students (cost=1)
+         	-> Seq Scan on enrollments (cost=1)
+[proj4] Transaction 4 scanned 50 students under 2PL S-locks; committing releases them
+[proj5] Committed 20 rows to heap table 'ledger' durably to the log
+[proj5] After ARIES restart recovery, 'ledger' has 20 rows (expected 20) -> committed data survived the restart
+=== DEMO COMPLETE: all four project subsystems exercised end-to-end ===

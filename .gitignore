@@ -29,3 +29,7 @@ demo/*
 # Local dev toolchain / temp DB dirs
 *.dump
 *.dumpstream
+
+# classpath scratch
+cp.txt
+cp_test.txt
