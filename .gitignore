@@ -25,3 +25,7 @@ target/*
 hw*.zip
 *.zip
 demo/*
+
+# Local dev toolchain / temp DB dirs
+*.dump
+*.dumpstream
