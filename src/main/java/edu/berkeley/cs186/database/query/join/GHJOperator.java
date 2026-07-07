@@ -67,11 +67,18 @@ public class GHJOperator extends JoinOperator {
      * @param pass the current pass (used to pick a hash function)
      */
     private void partition(Partition[] partitions, Iterable<Record> records, boolean left, int pass) {
-        // TODO(proj3_part1): implement the partitioning logic
-        // You may find the implementation in SHJOperator.java to be a good
-        // starting point. You can use the static method HashFunc.hashDataBox
-        // to get a hash value.
-        return;
+        // Hash each record on its join column using the pass-specific hash
+        // function and route it to the matching partition. Using `pass` as the
+        // hash seed ensures each recursive level rehashes with a different
+        // function, so a partition that was too big gets split differently.
+        int columnIndex = left ? getLeftColumnIndex() : getRightColumnIndex();
+        for (Record record : records) {
+            DataBox columnValue = record.getValue(columnIndex);
+            int hash = HashFunc.hashDataBox(columnValue, pass);
+            int partitionNum = hash % partitions.length;
+            if (partitionNum < 0) partitionNum += partitions.length;
+            partitions[partitionNum].add(record);
+        }
     }
 
     /**
@@ -108,10 +115,26 @@ public class GHJOperator extends JoinOperator {
                 "fit in B-2 pages of memory."
             );
         }
-        // TODO(proj3_part1): implement the building and probing stage
-        // You shouldn't refer to any variable starting with "left" or "right"
-        // here, use the "build" and "probe" variables we set up for you.
-        // Check out how SHJOperator implements this function if you feel stuck.
+        // Build an in-memory hash table from the smaller (build) partition,
+        // keyed on the build join column.
+        Map<DataBox, List<Record>> hashTable = new HashMap<>();
+        for (Record buildRecord : buildRecords) {
+            DataBox buildJoinValue = buildRecord.getValue(buildColumnIndex);
+            hashTable.computeIfAbsent(buildJoinValue, k -> new ArrayList<>()).add(buildRecord);
+        }
+
+        // Probe the table with every probe record. For each match, concat in the
+        // correct order: the final output must always be left.concat(right).
+        for (Record probeRecord : probeRecords) {
+            DataBox probeJoinValue = probeRecord.getValue(probeColumnIndex);
+            if (!hashTable.containsKey(probeJoinValue)) continue;
+            for (Record buildRecord : hashTable.get(probeJoinValue)) {
+                Record joinedRecord = probeFirst
+                        ? probeRecord.concat(buildRecord)   // probe = left, build = right
+                        : buildRecord.concat(probeRecord);  // build = left, probe = right
+                this.joinedRecords.add(joinedRecord);
+            }
+        }
     }
 
     /**
@@ -133,9 +156,19 @@ public class GHJOperator extends JoinOperator {
         this.partition(rightPartitions, rightRecords, false, pass);
 
         for (int i = 0; i < leftPartitions.length; i++) {
-            // TODO(proj3_part1): implement the rest of grace hash join
-            // If you meet the conditions to run the build and probe you should
-            // do so immediately. Otherwise you should make a recursive call.
+            Partition leftPartition = leftPartitions[i];
+            Partition rightPartition = rightPartitions[i];
+            // If either side of this partition fits in B-2 pages of memory, we
+            // can build a hash table on it and probe immediately.
+            if (leftPartition.getNumPages() <= this.numBuffers - 2 ||
+                    rightPartition.getNumPages() <= this.numBuffers - 2) {
+                buildAndProbe(leftPartition, rightPartition);
+            } else {
+                // Otherwise recurse: re-partition this pair with the next hash
+                // function until the partitions are small enough (or we hit the
+                // max pass limit).
+                run(leftPartition, rightPartition, pass + 1);
+            }
         }
     }
 
@@ -201,8 +234,20 @@ public class GHJOperator extends JoinOperator {
         ArrayList<Record> leftRecords = new ArrayList<>();
         ArrayList<Record> rightRecords = new ArrayList<>();
 
-        // TODO(proj3_part1): populate leftRecords and rightRecords such that
-        // SHJ breaks when trying to join them but not GHJ
+        // With B = 6 buffers each page holds 8 records, so B-2 = 4 pages = 32
+        // records can be held in memory for the build side.
+        //
+        // SHJ does a SINGLE hashing pass. Using 160 records with DISTINCT keys,
+        // the single pass leaves one partition with ~39 records (~4.9 pages),
+        // which exceeds B-2 = 4 pages, so SHJ throws.
+        //
+        // GHJ recurses: because the keys are all distinct, re-partitioning the
+        // oversized partition with a different hash function on the next pass
+        // spreads those records out until every partition fits, so GHJ succeeds.
+        for (int i = 0; i < 160; i++) {
+            leftRecords.add(createRecord(i));
+            rightRecords.add(createRecord(i));
+        }
         return new Pair<>(leftRecords, rightRecords);
     }
 
@@ -222,8 +267,18 @@ public class GHJOperator extends JoinOperator {
     public static Pair<List<Record>, List<Record>> getBreakGHJInputs() {
         ArrayList<Record> leftRecords = new ArrayList<>();
         ArrayList<Record> rightRecords = new ArrayList<>();
-        // TODO(proj3_part1): populate leftRecords and rightRecords such that GHJ breaks
 
+        // GHJ fails only when a partition can never be broken small enough. Any
+        // set of records that all share the SAME join key always hashes to the
+        // same partition on every pass, so re-partitioning makes no progress.
+        //
+        // 40 records with an identical key occupy 5 pages, which exceeds
+        // B-2 = 4 pages on every pass. GHJ recurses until it hits the maximum
+        // pass limit and throws "Reached the max number of passes".
+        for (int i = 0; i < 40; i++) {
+            leftRecords.add(createRecord(0));
+            rightRecords.add(createRecord(0));
+        }
         return new Pair<>(leftRecords, rightRecords);
     }
 }

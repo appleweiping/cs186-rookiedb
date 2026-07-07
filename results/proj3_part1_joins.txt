@@ -1,0 +1,11 @@
+[INFO] Running edu.berkeley.cs186.database.query.TestGraceHashJoin
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 12.175 s - in edu.berkeley.cs186.database.query.TestGraceHashJoin
+[INFO] Running edu.berkeley.cs186.database.query.TestNestedLoopJoin
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.84 s - in edu.berkeley.cs186.database.query.TestNestedLoopJoin
+[INFO] Running edu.berkeley.cs186.database.query.TestSortMergeJoin
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.043 s - in edu.berkeley.cs186.database.query.TestSortMergeJoin
+[INFO] Running edu.berkeley.cs186.database.query.TestSortOperator
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.708 s - in edu.berkeley.cs186.database.query.TestSortOperator
+[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+Command: mvn test -Dproj=3Part1  (JDK21, Windows 11)

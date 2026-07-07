@@ -87,7 +87,14 @@ public class BNLJOperator extends JoinOperator {
          * Make sure you pass in the correct schema to this method.
          */
         private void fetchNextLeftBlock() {
-            // TODO(proj3_part1): implement
+            // Grab up to B-2 pages of records from the left source into a
+            // backtracking block iterator, and set leftRecord to the first
+            // record of that block.
+            if (!leftSourceIterator.hasNext()) return;
+            leftBlockIterator = QueryOperator.getBlockIterator(
+                    leftSourceIterator, getLeftSource().getSchema(), numBuffers - 2);
+            leftBlockIterator.markNext();
+            leftRecord = leftBlockIterator.next();
         }
 
         /**
@@ -102,7 +109,12 @@ public class BNLJOperator extends JoinOperator {
          * Make sure you pass in the correct schema to this method.
          */
         private void fetchNextRightPage() {
-            // TODO(proj3_part1): implement
+            // Grab exactly one page of records from the right source into a
+            // backtracking page iterator.
+            if (!rightSourceIterator.hasNext()) return;
+            rightPageIterator = QueryOperator.getBlockIterator(
+                    rightSourceIterator, getRightSource().getSchema(), 1);
+            rightPageIterator.markNext();
         }
 
         /**
@@ -114,8 +126,42 @@ public class BNLJOperator extends JoinOperator {
          * of JoinOperator).
          */
         private Record fetchNextRecord() {
-            // TODO(proj3_part1): implement
-            return null;
+            // The left source was empty, nothing to join.
+            if (leftRecord == null) return null;
+
+            while (true) {
+                if (rightPageIterator.hasNext()) {
+                    // Case 1: there is another right record on the current right
+                    // page. Join it with the current left record if they match.
+                    Record rightRecord = rightPageIterator.next();
+                    if (compare(leftRecord, rightRecord) == 0) {
+                        return leftRecord.concat(rightRecord);
+                    }
+                } else if (leftBlockIterator.hasNext()) {
+                    // Case 2: the right page is exhausted but there are more
+                    // records in the current left block. Advance the left record
+                    // and rewind the right page to the start.
+                    leftRecord = leftBlockIterator.next();
+                    rightPageIterator.reset();
+                } else if (rightSourceIterator.hasNext()) {
+                    // Case 3: the left block is exhausted for this right page.
+                    // Advance to the next right page, rewind the left block to
+                    // its start, and re-read its first record.
+                    fetchNextRightPage();
+                    leftBlockIterator.reset();
+                    leftRecord = leftBlockIterator.next();
+                } else if (leftSourceIterator.hasNext()) {
+                    // Case 4: we've paired the current left block with every
+                    // right page. Advance to the next left block and rewind the
+                    // right source to the beginning.
+                    fetchNextLeftBlock();
+                    rightSourceIterator.reset();
+                    fetchNextRightPage();
+                } else {
+                    // No more records anywhere.
+                    return null;
+                }
+            }
         }
 
         /**

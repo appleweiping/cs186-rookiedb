@@ -139,8 +139,51 @@ public class SortMergeOperator extends JoinOperator {
          * or null if there are no more records to join.
          */
         private Record fetchNextRecord() {
-            // TODO(proj3_part1): implement
-            return null;
+            // Standard sort-merge join. Both inputs are sorted on the join key.
+            // We advance the two cursors in lockstep. When a left and right key
+            // match, we mark the right position and emit every right record that
+            // matches the current left record; then we reset the right cursor to
+            // the mark and advance the left record, so duplicate keys on both
+            // sides produce the full cross product.
+            while (true) {
+                if (leftRecord == null) {
+                    // Left input exhausted: no more output.
+                    return null;
+                }
+
+                if (!marked) {
+                    // Advance whichever side is smaller until the keys line up.
+                    while (rightRecord != null && compare(leftRecord, rightRecord) < 0) {
+                        if (!leftIterator.hasNext()) return null;
+                        leftRecord = leftIterator.next();
+                    }
+                    while (rightRecord != null && compare(leftRecord, rightRecord) > 0) {
+                        rightRecord = rightIterator.hasNext() ? rightIterator.next() : null;
+                    }
+                    if (rightRecord == null) {
+                        // No right record can match the remaining left records.
+                        return null;
+                    }
+                    // Keys are equal: mark the start of this run of right records.
+                    rightIterator.markPrev();
+                    marked = true;
+                }
+
+                if (rightRecord != null && compare(leftRecord, rightRecord) == 0) {
+                    // Emit this matching pair and advance the right cursor.
+                    Record result = leftRecord.concat(rightRecord);
+                    rightRecord = rightIterator.hasNext() ? rightIterator.next() : null;
+                    return result;
+                }
+
+                // The current right run no longer matches the left record. Rewind
+                // the right cursor to the mark and advance the left record to try
+                // the next left key against the same run of right records.
+                rightIterator.reset();
+                rightRecord = rightIterator.next();
+                leftRecord = leftIterator.hasNext() ? leftIterator.next() : null;
+                marked = false;
+            }
         }
 
         @Override

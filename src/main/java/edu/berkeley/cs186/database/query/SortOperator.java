@@ -86,8 +86,13 @@ public class SortOperator extends QueryOperator {
      * iterator
      */
     public Run sortRun(Iterator<Record> records) {
-        // TODO(proj3_part1): implement
-        return null;
+        // In-memory sort of a block of records into a single sorted run.
+        List<Record> recordList = new ArrayList<>();
+        while (records.hasNext()) {
+            recordList.add(records.next());
+        }
+        recordList.sort(comparator);
+        return makeRun(recordList);
     }
 
     /**
@@ -107,8 +112,33 @@ public class SortOperator extends QueryOperator {
      */
     public Run mergeSortedRuns(List<Run> runs) {
         assert (runs.size() <= this.numBuffers - 1);
-        // TODO(proj3_part1): implement
-        return null;
+        // K-way merge of already-sorted runs using a priority queue that holds
+        // at most one record per run at any time (runs.size() records total).
+        PriorityQueue<Pair<Record, Integer>> pq =
+                new PriorityQueue<>(new RecordPairComparator());
+
+        // One iterator per run; seed the queue with each run's first record.
+        List<Iterator<Record>> iterators = new ArrayList<>();
+        for (int i = 0; i < runs.size(); i++) {
+            Iterator<Record> it = runs.get(i).iterator();
+            iterators.add(it);
+            if (it.hasNext()) {
+                pq.add(new Pair<>(it.next(), i));
+            }
+        }
+
+        Run output = makeRun();
+        while (!pq.isEmpty()) {
+            Pair<Record, Integer> smallest = pq.poll();
+            output.add(smallest.getFirst());
+            int runIndex = smallest.getSecond();
+            // Refill from the same run the smallest record came from.
+            Iterator<Record> it = iterators.get(runIndex);
+            if (it.hasNext()) {
+                pq.add(new Pair<>(it.next(), runIndex));
+            }
+        }
+        return output;
     }
 
     /**
@@ -132,8 +162,14 @@ public class SortOperator extends QueryOperator {
      * @return a list of sorted runs obtained by merging the input runs
      */
     public List<Run> mergePass(List<Run> runs) {
-        // TODO(proj3_part1): implement
-        return Collections.emptyList();
+        // Merge (numBuffers - 1) runs at a time; the last group may be smaller.
+        List<Run> merged = new ArrayList<>();
+        int groupSize = numBuffers - 1;
+        for (int i = 0; i < runs.size(); i += groupSize) {
+            List<Run> group = runs.subList(i, Math.min(i + groupSize, runs.size()));
+            merged.add(mergeSortedRuns(group));
+        }
+        return merged;
     }
 
     /**
@@ -148,8 +184,22 @@ public class SortOperator extends QueryOperator {
         // Iterator over the records of the relation we want to sort
         Iterator<Record> sourceIterator = getSource().iterator();
 
-        // TODO(proj3_part1): implement
-        return makeRun(); // TODO(proj3_part1): replace this!
+        // Pass 0: read the source B pages at a time, sorting each block in
+        // memory into an initial sorted run.
+        List<Run> runs = new ArrayList<>();
+        while (sourceIterator.hasNext()) {
+            BacktrackingIterator<Record> block = QueryOperator.getBlockIterator(
+                    sourceIterator, getSchema(), numBuffers);
+            runs.add(sortRun(block));
+        }
+
+        // Passes 1..n: repeatedly merge (B-1) runs at a time until one run left.
+        while (runs.size() > 1) {
+            runs = mergePass(runs);
+        }
+
+        // An empty source yields an empty run.
+        return runs.isEmpty() ? makeRun() : runs.get(0);
     }
 
     /**
