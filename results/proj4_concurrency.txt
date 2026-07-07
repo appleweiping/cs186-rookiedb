@@ -1,0 +1,15 @@
+[INFO] Running edu.berkeley.cs186.database.concurrency.TestLockContext
+[INFO] Tests run: 20, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.101 s - in edu.berkeley.cs186.database.concurrency.TestLockContext
+[INFO] Running edu.berkeley.cs186.database.concurrency.TestLockManager
+[INFO] Tests run: 19, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.022 s - in edu.berkeley.cs186.database.concurrency.TestLockManager
+[INFO] Running edu.berkeley.cs186.database.concurrency.TestLockType
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s - in edu.berkeley.cs186.database.concurrency.TestLockType
+[INFO] Running edu.berkeley.cs186.database.concurrency.TestLockUtil
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.261 s - in edu.berkeley.cs186.database.concurrency.TestLockUtil
+[INFO] Running edu.berkeley.cs186.database.TestDatabase2PL
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 7.242 s - in edu.berkeley.cs186.database.TestDatabase2PL
+[INFO] Running edu.berkeley.cs186.database.TestDatabaseDeadlockPrecheck
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.043 s - in edu.berkeley.cs186.database.TestDatabaseDeadlockPrecheck
+[INFO] Tests run: 64, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+Command: mvn test -Dproj=4 -DargLine="-Xms256m -Xmx768m"  (JDK21, Windows 11)

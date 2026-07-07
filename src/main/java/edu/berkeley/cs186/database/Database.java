@@ -934,7 +934,20 @@ public class Database implements AutoCloseable {
         @Override
         public void close() {
             try {
-                // TODO(proj4_part2)
+                // 2PL release phase: release ALL locks this transaction holds.
+                // Multigranularity requires releasing a lock only after all its
+                // descendant locks are gone, so we release in order of DECREASING
+                // resource-name depth (deepest/children first, then ancestors).
+                List<Lock> heldLocks = lockManager.getLocks(this);
+                // Depth is the number of '/'-separated components in the resource
+                // name; releasing deepest-first guarantees children go before
+                // their ancestors.
+                heldLocks.sort((l1, l2) -> Integer.compare(
+                        resourceDepth(l2.name), resourceDepth(l1.name)));
+                for (Lock lock : heldLocks) {
+                    LockContext ctx = LockContext.fromResourceName(lockManager, lock.name);
+                    ctx.release(this);
+                }
                 return;
             } catch (Exception e) {
                 // There's a chance an error message from your release phase
@@ -946,6 +959,18 @@ public class Database implements AutoCloseable {
             } finally {
                 if (!this.recoveryTransaction) TransactionContext.unsetTransaction();
             }
+        }
+
+        // Depth of a resource in the hierarchy, derived from its '/'-separated
+        // string form (e.g. "database/table/1" has depth 3). Used to release
+        // locks children-first during the 2PL release phase.
+        private int resourceDepth(ResourceName name) {
+            int depth = 1;
+            String s = name.toString();
+            for (int i = 0; i < s.length(); i++) {
+                if (s.charAt(i) == '/') depth++;
+            }
+            return depth;
         }
 
         @Override

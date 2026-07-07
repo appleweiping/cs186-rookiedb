@@ -247,6 +247,9 @@ public class Table implements BacktrackingIterable<Record> {
     public synchronized RecordId addRecord(Record record) {
         record = schema.verify(record);
         Page page = pageDirectory.getPageWithSpace(schema.getSizeInBytes());
+        // Inserting writes to the target page, so acquire exclusive (X) access.
+        LockContext pageContext = tableContext.childContext(page.getPageNum());
+        LockUtil.ensureSufficientLockHeld(pageContext, LockType.X);
         try {
             // Find the first empty slot in the bitmap.
             // entry number of the first free slot and store it in entryNum; and (2) we
@@ -282,6 +285,9 @@ public class Table implements BacktrackingIterable<Record> {
      */
     public synchronized Record getRecord(RecordId rid) {
         validateRecordId(rid);
+        // Reading a single record requires shared (S) access to its page.
+        LockContext pageContext = tableContext.childContext(rid.getPageNum());
+        LockUtil.ensureSufficientLockHeld(pageContext, LockType.S);
         Page page = fetchPage(rid.getPageNum());
         try {
             byte[] bitmap = getBitMap(page);
@@ -309,8 +315,8 @@ public class Table implements BacktrackingIterable<Record> {
         // If we're updating a record we'll need exclusive access to the page
         // its on.
         LockContext pageContext = tableContext.childContext(rid.getPageNum());
-        // TODO(proj4_part2): Update the following line
-        LockUtil.ensureSufficientLockHeld(pageContext, LockType.NL);
+        // Updating a record requires exclusive (X) access to its page.
+        LockUtil.ensureSufficientLockHeld(pageContext, LockType.X);
 
         Record newRecord = schema.verify(updated);
         Record oldRecord = getRecord(rid);
@@ -336,8 +342,8 @@ public class Table implements BacktrackingIterable<Record> {
         validateRecordId(rid);
         LockContext pageContext = tableContext.childContext(rid.getPageNum());
 
-        // TODO(proj4_part2): Update the following line
-        LockUtil.ensureSufficientLockHeld(pageContext, LockType.NL);
+        // Deleting a record requires exclusive (X) access to its page.
+        LockUtil.ensureSufficientLockHeld(pageContext, LockType.X);
 
         Page page = fetchPage(rid.getPageNum());
         try {
@@ -405,8 +411,8 @@ public class Table implements BacktrackingIterable<Record> {
      * records
      */
     public BacktrackingIterator<RecordId> ridIterator() {
-        // TODO(proj4_part2): Update the following line
-        LockUtil.ensureSufficientLockHeld(tableContext, LockType.NL);
+        // A full scan reads the whole table, so acquire an S lock on the table.
+        LockUtil.ensureSufficientLockHeld(tableContext, LockType.S);
 
         BacktrackingIterator<Page> iter = pageDirectory.iterator();
         return new ConcatBacktrackingIterator<>(new PageIterator(iter, false));
@@ -419,8 +425,9 @@ public class Table implements BacktrackingIterable<Record> {
      * will also support backtracking.
      */
     public BacktrackingIterator<Record> recordIterator(Iterator<RecordId> rids) {
-        // TODO(proj4_part2): Update the following line
-        LockUtil.ensureSufficientLockHeld(tableContext, LockType.NL);
+        // Iterating over records reads them; a shared (S) lock on the table
+        // covers all the records being read.
+        LockUtil.ensureSufficientLockHeld(tableContext, LockType.S);
         return new RecordIterator(rids);
     }
 

@@ -21,9 +21,23 @@ public enum LockType {
         if (a == null || b == null) {
             throw new NullPointerException("null lock type");
         }
-        // TODO(proj4_part1): implement
-
-        return false;
+        // Standard multigranularity compatibility matrix. NL is compatible with
+        // everything. The rest follow from what each lock permits:
+        //   - IS conflicts only with X.
+        //   - IX conflicts with S, SIX, and X (any lock that assumes a stable
+        //     view or exclusive access to descendants).
+        //   - S conflicts with IX, SIX, and X.
+        //   - SIX conflicts with everything except IS (and NL).
+        //   - X conflicts with everything except NL.
+        if (a == NL || b == NL) return true;
+        switch (a) {
+            case IS:  return b != X;
+            case IX:  return b == IS || b == IX;
+            case S:   return b == IS || b == S;
+            case SIX: return b == IS;
+            case X:   return false;
+            default:  throw new UnsupportedOperationException("bad lock type");
+        }
     }
 
     /**
@@ -53,9 +67,17 @@ public enum LockType {
         if (parentLockType == null || childLockType == null) {
             throw new NullPointerException("null lock type");
         }
-        // TODO(proj4_part1): implement
-
-        return false;
+        // A child holding NL needs nothing from its parent.
+        if (childLockType == NL) return true;
+        // To hold an actual (S/IS) lock on a child, the parent must hold at
+        // least an IS. To hold an X-flavored (X/IX/SIX) lock on a child, the
+        // parent must hold an IX or SIX.
+        switch (parentLockType) {
+            case IS:  return childLockType == IS || childLockType == S;
+            case IX:  return true;   // IX permits any child lock
+            case SIX: return childLockType == X || childLockType == IX || childLockType == SIX;
+            default:  return false;  // S, X, NL cannot be parents of a real lock
+        }
     }
 
     /**
@@ -68,9 +90,20 @@ public enum LockType {
         if (required == null || substitute == null) {
             throw new NullPointerException("null lock type");
         }
-        // TODO(proj4_part1): implement
-
-        return false;
+        // `substitute` can stand in for `required` if it grants at least all the
+        // capabilities `required` does.
+        switch (required) {
+            case NL:  return true;                       // anything covers NL
+            case IS:  return substitute != NL;           // any real lock covers IS
+            case IX:  return substitute == IX || substitute == SIX || substitute == X;
+            case S:   return substitute == S || substitute == SIX || substitute == X;
+            // SIX = S + IX. Only SIX (or X, which permits everything on this
+            // node) can substitute; note X does not allow IX-style child intent,
+            // but on the node itself X is at least as permissive as SIX.
+            case SIX: return substitute == SIX || substitute == X;
+            case X:   return substitute == X;
+            default:  throw new UnsupportedOperationException("bad lock type");
+        }
     }
 
     /**
